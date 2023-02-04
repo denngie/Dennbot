@@ -24,7 +24,7 @@ def gettoken() -> str:
             "grant_type": "client_credentials"
         }
 
-        response = post(url, data=data)
+        response = post(url, data=data, timeout=30)
 
         response_data = loads(response.text)
         response_data["expires_at"] = int(time()) + int(response_data["expires_in"])
