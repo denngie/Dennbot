@@ -6,12 +6,13 @@ from gql.transport.exceptions import TransportServerError
 from gql.transport.requests import RequestsHTTPTransport
 from gql import Client, gql
 from tokencache import gettoken
+from settings import ALTS
 
 
 class WCL:
     """Retrieve data from WCL API."""
 
-    def __init__(self, zone: int, start_date: str, end_date: str, tag: int, encounter: int) -> None:
+    def __init__(self, zone: int, start_date: str, end_date: str, encounter: int) -> None:
         """Initiate class."""
         url = "https://classic.warcraftlogs.com/api/v2/client"
         token = gettoken()
@@ -20,7 +21,6 @@ class WCL:
         self.zone = zone
         self.start_date = start_date
         self.end_date = end_date
-        self.tag = tag
         self.encounter = encounter
         self.players: dict[str, int] = defaultdict(int)
 
@@ -101,11 +101,13 @@ class WCL:
 
     def _combine_alts(self) -> None:
         """Combine alts attendance to main."""
-        if {"Liltkw", "Tkwxd"} <= self.players.keys():
-            self.players["Liltkw"] += self.players["Tkwxd"]
-            self.players.pop("Tkwxd")
+        for main, alts in ALTS.items():
+            for alt in alts:
+                if {main, alt} <= self.players.keys():
+                    self.players[main] += self.players[alt]
+                    self.players.pop(alt)
 
-    def calculate_attendance(self) -> tuple[dict[str, int], int]:
+    def calculate_attendance(self) -> list[str]:
         """Calculate attendance according to args."""
         start_utime, end_utime = self._convert_dates()
 
@@ -153,7 +155,12 @@ class WCL:
             total_raids += 1
 
         self._combine_alts()
-        return self.players, total_raids
+        sorted_players: list[str] = []
+        for player, value in sorted(self.players.items(), key=lambda item: item[1], reverse=True):
+            percentage = value / total_raids * 100
+            percentage = min(percentage, 100)
+            sorted_players.append(f"{player}: {percentage:.0f}%")
+        return sorted_players
 
     @staticmethod
     def _avg_deaths(death_stats: dict[str, dict]) -> dict[str, float]:
@@ -179,9 +186,9 @@ class WCL:
 
         query = (
             """
-            query ($end: Float, $tag: Int, $page: Int, $start: Float, $zone: Int) {
+            query ($end: Float, $page: Int, $start: Float, $zone: Int) {
                 reportData {
-                    reports(endTime: $end, guildID: 611338, guildTagID: $tag, limit: 100,
+                    reports(endTime: $end, guildID: 611338, guildTagID: 50758, limit: 100,
                             page: $page, startTime: $start, zoneID: $zone) {
                         total
                         has_more_pages
@@ -201,7 +208,7 @@ class WCL:
         """
         )
 
-        params = {"end": end, "tag": self.tag, "start": start, "zone": self.zone}
+        params = {"end": end, "start": start, "zone": self.zone}
         data = self._get_all_results(query, "reportData", params)
 
         death_stats: dict[str, dict] = {}
