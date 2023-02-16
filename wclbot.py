@@ -93,7 +93,8 @@ async def attendance_function(ctx: InteractionContext,
         players_attendance = wcl.calculate_attendance()
     except ConnectionError as err:
         await ctx.send(f"Something went wrong. Error message {err}")
-        raise
+        return
+
     output = Embed()
     output.title = "Attendance"
     text = []
@@ -137,7 +138,7 @@ async def deaths_function(ctx: InteractionContext,
         player_stats = wcl.calculate_deaths()
     except ConnectionError as err:
         await ctx.send(f"Something went wrong. Error message {err}")
-        raise
+        return
 
     if encounter:
         field_name = ENCOUNTERS[encounter]
