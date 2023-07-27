@@ -1,11 +1,13 @@
 #!/usr/bin/python3.10
 """WCL Bot."""
-from dis_snek import (Snake, Intents, InteractionContext, OptionTypes, SlashCommandChoice, Embed,
-                      listen, slash_command, slash_option)
+# from dis_snek import (Snake, Intents, InteractionContext, OptionTypes, SlashCommandChoice, Embed,
+#                       listen, slash_command, slash_option)
+from interactions import (Client, Intents, listen, slash_command, SlashContext, OptionType,
+                          slash_option, SlashCommandChoice, Embed)
 from wclapi import WCL
 from settings import BOT_TOKEN, ENCOUNTERS, ZONES
 
-bot = Snake(intents=Intents.DEFAULT)
+bot = Client(intents=Intents.DEFAULT)
 
 
 def zone_option():  # type: ignore
@@ -16,7 +18,7 @@ def zone_option():  # type: ignore
             name="zone",
             description="Choose a zone",
             required=True,
-            opt_type=OptionTypes.INTEGER,
+            opt_type=OptionType.INTEGER,
             choices=[SlashCommandChoice(name=v, value=k) for k, v in ZONES.items()]
         )(func)
 
@@ -31,7 +33,7 @@ def start_date_option():  # type: ignore
             name="start_date",
             description="ISO8601 date | Example: 2022-04-01",
             required=False,
-            opt_type=OptionTypes.STRING
+            opt_type=OptionType.STRING
         )(func)
 
     return wrapper
@@ -45,7 +47,7 @@ def end_date_option():  # type: ignore
             name="end_date",
             description="ISO8601 date | Example: 2022-04-31",
             required=False,
-            opt_type=OptionTypes.STRING
+            opt_type=OptionType.STRING
         )(func)
 
     return wrapper
@@ -59,7 +61,7 @@ def encounter_option():  # type: ignore
             name="encounter",
             description="Choose a specific raid (Naxx/Sarth/Maly only)",
             required=False,
-            opt_type=OptionTypes.INTEGER,
+            opt_type=OptionType.INTEGER,
             choices=[SlashCommandChoice(name=v, value=k) for k, v in ENCOUNTERS.items()]
         )(func)
 
@@ -78,7 +80,7 @@ async def on_ready() -> None:
 @start_date_option()
 @end_date_option()
 @encounter_option()
-async def attendance_function(ctx: InteractionContext,
+async def attendance_function(ctx: SlashContext,
                               zone: int,
                               start_date: str = "",
                               end_date: str = "",
@@ -122,7 +124,7 @@ async def attendance_function(ctx: InteractionContext,
 @start_date_option()
 @end_date_option()
 @encounter_option()
-async def deaths_function(ctx: InteractionContext,
+async def deaths_function(ctx: SlashContext,
                           zone: int,
                           start_date: str = "",
                           end_date: str = "",
