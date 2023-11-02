@@ -21,7 +21,7 @@ def gettoken() -> str:
         data = {
             "client_id": CLIENT_ID,
             "client_secret": CLIENT_SECRET,
-            "grant_type": "client_credentials"
+            "grant_type": "client_credentials",
         }
 
         response = post(url, data=data, timeout=30)

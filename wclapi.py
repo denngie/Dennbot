@@ -12,7 +12,9 @@ from settings import ALTS
 class WCL:
     """Retrieve data from WCL API."""
 
-    def __init__(self, zone: int, start_date: str, end_date: str, encounter: int) -> None:
+    def __init__(
+        self, zone: int, start_date: str, end_date: str, encounter: int
+    ) -> None:
         """Initiate class."""
         url = "https://classic.warcraftlogs.com/api/v2/client"
         token = gettoken()
@@ -22,9 +24,11 @@ class WCL:
         self.start_date = start_date
         self.end_date = end_date
         self.encounter = encounter
-        self.players: dict[str, int] = defaultdict(int)
+        self.players: dict[str, set] = defaultdict(set)
 
-    def _get_all_results(self, query: str, querytype: str, params: dict[str, int]) -> list:
+    def _get_all_results(
+        self, query: str, querytype: str, params: dict[str, int]
+    ) -> list:
         """Get all results from query."""
         gqlquery = gql(query)
         data = []
@@ -38,14 +42,28 @@ class WCL:
                 raise ConnectionError(err) from err
 
             if querytype == "reportData":
-                data += result["reportData"]["reports"]["data"]  # pylint: disable=unsubscriptable-object
-                if result["reportData"]["reports"]["has_more_pages"]:  # pylint: disable=unsubscriptable-object
+                data += result.get("reportData", {}).get("reports", {}).get("data")
+                if (
+                    result.get("reportData", {})
+                    .get("reports", {})
+                    .get("has_more_pages")
+                ):
                     page += 1
                 else:
                     page = False
             elif querytype == "guildData":
-                data += result["guildData"]["guild"]["attendance"]["data"]  # pylint: disable=unsubscriptable-object
-                if result["guildData"]["guild"]["attendance"]["has_more_pages"]:  # pylint: disable=unsubscriptable-object
+                data += (
+                    result.get("guildData", {})
+                    .get("guild", {})
+                    .get("attendance", {})
+                    .get("data")
+                )
+                if (
+                    result.get("guildData", {})
+                    .get("guild", {})
+                    .get("attendance", {})
+                    .get("has_more_pages")
+                ):
                     page += 1
                 else:
                     page = False
@@ -56,12 +74,17 @@ class WCL:
         """Convert dates from string to utime."""
         if self.start_date:
             start_datetime = datetime.fromisoformat(self.start_date)
-            start_utime = int(start_datetime.replace(tzinfo=timezone.utc).timestamp()) * 1000
+            start_utime = (
+                int(start_datetime.replace(tzinfo=timezone.utc).timestamp()) * 1000
+            )
         else:
             start_utime = 0
         if self.end_date:
             end_datetime = datetime.fromisoformat(self.end_date)
-            end_utime = int(end_datetime.replace(tzinfo=timezone.utc).timestamp()) * 1000 + 86400000
+            end_utime = (
+                int(end_datetime.replace(tzinfo=timezone.utc).timestamp()) * 1000
+                + 86400000
+            )
         else:
             end_utime = 9999999999999
 
@@ -69,8 +92,7 @@ class WCL:
 
     def _encounter_reports(self) -> list[str]:
         """Retrieve raid reports for specific encounter."""
-        query = (
-            """
+        query = """
             query ($page: Int, $zone: Int, $encounter: Int) {
                 reportData {
                     reports(guildID: 611338, guildTagID: 50758, limit: 100,
@@ -87,7 +109,6 @@ class WCL:
                 }
             }
         """
-        )
 
         params = {"zone": self.zone, "encounter": self.encounter}
         data = self._get_all_results(query, "reportData", params)
@@ -104,7 +125,7 @@ class WCL:
         for main, alts in ALTS.items():
             for alt in alts:
                 if {main, alt} <= self.players.keys():
-                    self.players[main] += self.players[alt]
+                    self.players[main].update(self.players[alt])
                     self.players.pop(alt)
 
     def calculate_attendance(self) -> list[str]:
@@ -114,8 +135,7 @@ class WCL:
         if self.encounter:
             encounter_reports = self._encounter_reports()
 
-        query = (
-            """
+        query = """
             query ($page: Int, $zone: Int) {
                 guildData {
                     guild(id: 611338) {
@@ -137,7 +157,6 @@ class WCL:
                 }
             }
         """
-        )
         params = {"zone": self.zone}
         data = self._get_all_results(query, "guildData", params)
         total_raids = 0
@@ -151,13 +170,15 @@ class WCL:
                 continue
 
             for player in report["players"]:
-                self.players[player["name"]] += 1
+                self.players[player["name"]].add(report["code"])
             total_raids += 1
 
         self._combine_alts()
         sorted_players: list[str] = []
-        for player, value in sorted(self.players.items(), key=lambda item: item[1], reverse=True):
-            percentage = value / total_raids * 100
+        for player, value in sorted(
+            self.players.items(), key=lambda item: len(item[1]), reverse=True
+        ):
+            percentage = len(value) / total_raids * 100
             percentage = min(percentage, 100)
             sorted_players.append(f"{player}: {percentage:.0f}%")
         return sorted_players
@@ -170,7 +191,7 @@ class WCL:
             if player_stat["reports"] < 5:
                 continue
             try:
-                avg = float(player_stat['deaths'] / player_stat['reports'])
+                avg = float(player_stat["deaths"] / player_stat["reports"])
             except ZeroDivisionError:
                 avg = float(0)
             player_stats[player] = avg
@@ -184,8 +205,7 @@ class WCL:
         if self.encounter:
             encounter_reports = self._encounter_reports()
 
-        query = (
-            """
+        query = """
             query ($end: Float, $page: Int, $start: Float, $zone: Int) {
                 reportData {
                     reports(endTime: $end, guildID: 611338, guildTagID: 50758, limit: 100,
@@ -206,7 +226,6 @@ class WCL:
                 }
             }
         """
-        )
 
         params = {"end": end, "start": start, "zone": self.zone}
         data = self._get_all_results(query, "reportData", params)
@@ -225,9 +244,13 @@ class WCL:
 
             for entry in report["table"]["data"]["entries"]:
                 # Ignore priest double deaths due to spirit form
-                if all([entry["icon"] == "Priest-Holy",
+                if all(
+                    [
+                        entry["icon"] == "Priest-Holy",
                         entry["damage"]["abilities"],
-                        entry["events"]]):
+                        entry["events"],
+                    ]
+                ):
                     continue
 
                 if entry["fight"] not in wipes:
