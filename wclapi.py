@@ -25,6 +25,7 @@ class WCL:
         self.end_date = end_date
         self.encounter = encounter
         self.players: dict[str, set] = defaultdict(set)
+        self.wipecutoff = 10
 
     def _get_all_results(
         self, query: str, querytype: str, params: dict[str, int]
@@ -139,7 +140,8 @@ class WCL:
             query ($page: Int, $zone: Int) {
                 guildData {
                     guild(id: 611338) {
-                        attendance(guildTagID: 50758, limit: 25, page: $page, zoneID: $zone) {
+                        attendance(guildTagID: 50758, limit: 25,
+                                   page: $page, zoneID: $zone) {
                             total
                             has_more_pages
                             data {
@@ -208,8 +210,8 @@ class WCL:
         query = """
             query ($end: Float, $page: Int, $start: Float, $zone: Int) {
                 reportData {
-                    reports(endTime: $end, guildID: 611338, guildTagID: 50758, limit: 100,
-                            page: $page, startTime: $start, zoneID: $zone) {
+                    reports(endTime: $end, guildID: 611338, guildTagID: 50758,
+                            limit: 100, page: $page, startTime: $start, zoneID: $zone) {
                         total
                         has_more_pages
                         data {
@@ -257,3 +259,116 @@ class WCL:
                     death_stats[entry["name"]]["deaths"] += 1
 
         return self._avg_deaths(death_stats)
+
+    def lk_shadow_trap(self) -> list[str]:
+        """Calculate  who gets yeeted the most."""
+        start, end = self._convert_dates()
+
+        query = """
+            query ($end: Float, $page: Int, $start: Float, $wipecutoff: Int) {
+                reportData {
+                    reports(endTime: $end, guildID: 611338, guildTagID: 50758,
+                            limit: 100, page: $page, startTime: $start, zoneID: 1020) {
+                        total
+                        has_more_pages
+                        data {
+                            code
+                            rankedCharacters {
+                                name
+                            }
+                            table(abilityID: 73529, dataType: DamageTaken,
+                                  encounterID: 856, startTime: 0,
+                                  endTime: 9999999999999,
+                                  wipeCutoff: $wipecutoff)
+                        }
+                    }
+                }
+            }
+        """
+
+        params = {"end": end, "start": start, "wipecutoff": self.wipecutoff}
+        data = self._get_all_results(query, "reportData", params)
+
+        yeet_stats: dict[str, dict] = {}
+        for report in data:
+            for player in report["rankedCharacters"]:
+                if player["name"] not in yeet_stats:
+                    yeet_stats[player["name"]] = {"reports": 0, "deaths": 0}
+                yeet_stats[player["name"]]["reports"] += 1
+
+            for entry in report["table"]["data"]["entries"]:
+                yeet_stats[entry["name"]]["deaths"] += 1
+
+        # Combine alts to main
+        for main, alts in ALTS.items():
+            for alt in alts:
+                if {main, alt} <= yeet_stats.keys():
+                    yeet_stats[main]["deaths"] += yeet_stats[alt]["deaths"]
+                    yeet_stats[main]["reports"] += yeet_stats[alt]["reports"]
+                    yeet_stats.pop(alt)
+
+        average = self._avg_deaths(yeet_stats)
+
+        sorted_players: list[str] = []
+        for player, value in sorted(
+            average.items(), key=lambda item: float(item[1]), reverse=True
+        ):
+            total = yeet_stats[player]["deaths"]
+            sorted_players.append(f"{player}: {value * 100:.0f}% (total {total})")
+        return sorted_players
+
+    def halion_cutters(self) -> list[str]:
+        """Calculate who gets cut the most."""
+        start, end = self._convert_dates()
+
+        query = """
+            query ($end: Float, $page: Int, $start: Float, $wipecutoff: Int) {
+                reportData {
+                    reports(endTime: $end, guildID: 611338, guildTagID: 50758,
+                            limit: 100, page: $page, startTime: $start, zoneID: 1021) {
+                        total
+                        has_more_pages
+                        data {
+                            code
+                            rankedCharacters {
+                                name
+                            }
+                            table(abilityID: 74769, dataType: Deaths,
+                                  startTime: 0,
+                                  endTime: 9999999999999,
+                                  wipeCutoff: $wipecutoff)
+                        }
+                    }
+                }
+            }
+        """
+
+        params = {"end": end, "start": start, "wipecutoff": self.wipecutoff}
+        data = self._get_all_results(query, "reportData", params)
+        yeet_stats: dict[str, dict] = {}
+        for report in data:
+            for player in report["rankedCharacters"]:
+                if player["name"] not in yeet_stats:
+                    yeet_stats[player["name"]] = {"reports": 0, "deaths": 0}
+                yeet_stats[player["name"]]["reports"] += 1
+
+            for entry in report["table"]["data"]["entries"]:
+                yeet_stats[entry["name"]]["deaths"] += 1
+
+        # Combine alts to main
+        for main, alts in ALTS.items():
+            for alt in alts:
+                if {main, alt} <= yeet_stats.keys():
+                    yeet_stats[main]["deaths"] += yeet_stats[alt]["deaths"]
+                    yeet_stats[main]["reports"] += yeet_stats[alt]["reports"]
+                    yeet_stats.pop(alt)
+
+        average = self._avg_deaths(yeet_stats)
+
+        sorted_players: list[str] = []
+        for player, value in sorted(
+            average.items(), key=lambda item: float(item[1]), reverse=True
+        ):
+            total = yeet_stats[player]["deaths"]
+            sorted_players.append(f"{player}: {value * 100:.0f}% (total {total})")
+        return sorted_players
