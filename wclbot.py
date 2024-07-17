@@ -90,7 +90,7 @@ async def on_ready() -> None:
 @zone_option()
 @start_date_option()
 @end_date_option()
-@encounter_option()
+# @encounter_option()
 async def attendance_function(
     ctx: SlashContext,
     zone: int,
@@ -135,7 +135,7 @@ async def attendance_function(
 @zone_option()
 @start_date_option()
 @end_date_option()
-@encounter_option()
+# @encounter_option()
 async def deaths_function(
     ctx: SlashContext,
     zone: int,
@@ -178,92 +178,6 @@ async def deaths_function(
         output.add_field(
             name=field_name, inline=True, value="\n".join(text[i : i + 15])
         )
-    await ctx.send(embed=output)
-
-
-@slash_command(
-    name="shadowtrap",
-    description="Show the average amount of hits by LK shadow trap",
-)
-@start_date_option()
-@end_date_option()
-async def shadowtrap_function(
-    ctx: SlashContext,
-    zone: int = 1020,
-    start_date: str = "",
-    end_date: str = "",
-    encounter: int = 856,
-) -> None:
-    """Discord embed response with yeet data."""
-    await ctx.defer()
-    wcl = WCL(zone=zone, start_date=start_date, end_date=end_date, encounter=encounter)
-    try:
-        players_yeets = wcl.lk_shadow_trap()
-    except ConnectionError as err:
-        await ctx.send(f"Something went wrong. Error message {err}")
-        return
-
-    output = Embed()
-    output.title = "LK Shadow trap hits"
-    text = []
-
-    field_name = "Yeeted per raid night (minimum five raids, wipe cutoff 10)"
-    if start_date or end_date:
-        field_name += f" ({start_date}-{end_date})"
-
-    for player in players_yeets:
-        text.append(player)
-
-    for i in range(0, len(text), 15):
-        if i != 0:
-            field_name = "\u200b"
-        output.add_field(
-            name=field_name, inline=True, value="\n".join(text[i : i + 15])
-        )
-
-    await ctx.send(embed=output)
-
-
-@slash_command(
-    name="twilightcutter",
-    description="Show the average amount of death by a thousand cuts",
-)
-@start_date_option()
-@end_date_option()
-async def twilightcutter_function(
-    ctx: SlashContext,
-    zone: int = 1021,
-    start_date: str = "",
-    end_date: str = "",
-    encounter: int = 887,
-) -> None:
-    """Discord embed response with cut data."""
-    await ctx.defer()
-    wcl = WCL(zone=zone, start_date=start_date, end_date=end_date, encounter=encounter)
-    try:
-        players_yeets = wcl.halion_cutters()
-    except ConnectionError as err:
-        await ctx.send(f"Something went wrong. Error message {err}")
-        return
-
-    output = Embed()
-    output.title = "Halion Twilight Cutter hits"
-    text = []
-
-    field_name = "Cuts per raid night (minimum five raids, wipe cutoff 10)"
-    if start_date or end_date:
-        field_name += f" ({start_date}-{end_date})"
-
-    for player in players_yeets:
-        text.append(player)
-
-    for i in range(0, len(text), 15):
-        if i != 0:
-            field_name = "\u200b"
-        output.add_field(
-            name=field_name, inline=True, value="\n".join(text[i : i + 15])
-        )
-
     await ctx.send(embed=output)
 
 
