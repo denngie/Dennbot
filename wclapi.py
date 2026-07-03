@@ -19,7 +19,7 @@ class WCL:
         url = "https://classic.warcraftlogs.com/api/v2/client"
         token = gettoken()
         transport = RequestsHTTPTransport(url=url, headers={"Authorization": token})
-        self.client = Client(transport=transport, fetch_schema_from_transport=True)
+        self.client = Client(transport=transport, fetch_schema_from_transport=False)
         self.zone = zone
         self.start_date = start_date
         self.end_date = end_date
@@ -96,7 +96,7 @@ class WCL:
         query = """
             query ($page: Int, $zone: Int, $encounter: Int) {
                 reportData {
-                    reports(guildID: 611338, guildTagID: 50758, limit: 100,
+                    reports(guildID: 800398, guildTagID: 73249, limit: 100,
                             page: $page, zoneID: $zone) {
                         total
                         has_more_pages
@@ -132,6 +132,7 @@ class WCL:
     def calculate_attendance(self) -> list[str]:
         """Calculate attendance according to args."""
         start_utime, end_utime = self._convert_dates()
+        encounter_reports: list[str] = []
 
         if self.encounter:
             encounter_reports = self._encounter_reports()
@@ -139,8 +140,8 @@ class WCL:
         query = """
             query ($page: Int, $zone: Int) {
                 guildData {
-                    guild(id: 611338) {
-                        attendance(guildTagID: 50758, limit: 25,
+                    guild(id: 800398) {
+                        attendance(guildTagID: 73249, limit: 25,
                                    page: $page, zoneID: $zone) {
                             total
                             has_more_pages
@@ -203,6 +204,7 @@ class WCL:
     def calculate_deaths(self) -> dict[str, float]:
         """Retrieve raid reports for specific encounter."""
         start, end = self._convert_dates()
+        encounter_reports: list[str] = []
 
         if self.encounter:
             encounter_reports = self._encounter_reports()
@@ -210,7 +212,7 @@ class WCL:
         query = """
             query ($end: Float, $page: Int, $start: Float, $zone: Int) {
                 reportData {
-                    reports(endTime: $end, guildID: 611338, guildTagID: 50758,
+                    reports(endTime: $end, guildID: 800398, guildTagID: 73249,
                             limit: 100, page: $page, startTime: $start, zoneID: $zone) {
                         total
                         has_more_pages
@@ -267,7 +269,7 @@ class WCL:
         query = """
             query ($end: Float, $page: Int, $start: Float, $wipecutoff: Int) {
                 reportData {
-                    reports(endTime: $end, guildID: 611338, guildTagID: 50758,
+                    reports(endTime: $end, guildID: 800398, guildTagID: 73249,
                             limit: 100, page: $page, startTime: $start, zoneID: 1020) {
                         total
                         has_more_pages
@@ -324,7 +326,7 @@ class WCL:
         query = """
             query ($end: Float, $page: Int, $start: Float, $wipecutoff: Int) {
                 reportData {
-                    reports(endTime: $end, guildID: 611338, guildTagID: 50758,
+                    reports(endTime: $end, guildID: 800398, guildTagID: 73249,
                             limit: 100, page: $page, startTime: $start, zoneID: 1021) {
                         total
                         has_more_pages

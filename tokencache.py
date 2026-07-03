@@ -10,6 +10,7 @@ CACHE_FILE = "/var/tmp/wcloauth.json"
 
 def gettoken() -> str:
     """Return OAuth token."""
+    response_data = {}
     try:
         with open(CACHE_FILE, "r", encoding="utf-8") as infile:
             response_data = load(infile)

@@ -12,7 +12,9 @@ from interactions import (
     Embed,
 )
 from wclapi import WCL
-from settings import BOT_TOKEN, ENCOUNTERS, ZONES
+
+# from settings import BOT_TOKEN, ENCOUNTERS, ZONES
+from settings import BOT_TOKEN, ZONES
 
 bot = Client(intents=Intents.DEFAULT)
 
@@ -60,21 +62,21 @@ def end_date_option():  # type: ignore
     return wrapper
 
 
-def encounter_option():  # type: ignore
-    """End date option."""
+# def encounter_option():  # type: ignore
+#     """Encounter option."""
 
-    def wrapper(func):  # type: ignore
-        return slash_option(
-            name="encounter",
-            description="Choose a specific raid (Naxx/Sarth/Maly only)",
-            required=False,
-            opt_type=OptionType.INTEGER,
-            choices=[
-                SlashCommandChoice(name=v, value=k) for k, v in ENCOUNTERS.items()
-            ],
-        )(func)
+#     def wrapper(func):  # type: ignore
+#         return slash_option(
+#             name="encounter",
+#             description="Choose a specific raid (Naxx/Sarth/Maly only)",
+#             required=False,
+#             opt_type=OptionType.INTEGER,
+#             choices=[
+#                 SlashCommandChoice(name=v, value=k) for k, v in ENCOUNTERS.items()
+#             ],
+#         )(func)
 
-    return wrapper
+#     return wrapper
 
 
 @listen()
@@ -111,10 +113,11 @@ async def attendance_function(
     output.title = "Attendance"
     text = []
 
-    if encounter:
-        field_name = ENCOUNTERS[encounter]
-    else:
-        field_name = ZONES[zone]
+    # if encounter:
+    #     field_name = ENCOUNTERS[encounter]
+    # else:
+    #     field_name = ZONES[zone]
+    field_name = ZONES[zone]
     if start_date or end_date:
         field_name += f" ({start_date}-{end_date})"
 
@@ -153,13 +156,17 @@ async def deaths_function(
         await ctx.send(f"Something went wrong. Error message {err}")
         return
 
-    if encounter:
-        field_name = ENCOUNTERS[encounter]
-    else:
-        try:
-            field_name = ZONES[zone]
-        except KeyError:
-            field_name = ""
+    # if encounter:
+    #     field_name = ENCOUNTERS[encounter]
+    # else:
+    #     try:
+    #         field_name = ZONES[zone]
+    #     except KeyError:
+    #         field_name = ""
+    try:
+        field_name = ZONES[zone]
+    except KeyError:
+        field_name = ""
 
     if start_date or end_date:
         field_name += f" ({start_date}-{end_date})"
